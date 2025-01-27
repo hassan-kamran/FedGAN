@@ -12,3 +12,4 @@ federated_learning/
 federated_learning_2_5/
 data/
 models/
+.DS_Store
