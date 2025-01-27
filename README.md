@@ -78,12 +78,6 @@ noise = tf.random.normal([16, 200])
 generated_images = generator(noise, training=False)
 ```
 
-## Results
-| Model                     | Realism Score | Sample Output                          |
-|---------------------------|---------------|----------------------------------------|
-| Unfederated DCGAN         | 0.82 ± 0.05   | ![Unfederated](imgs/unfederated.png)   |
-| FedGAN (10 clients)       | 0.89 ± 0.03   | ![Federated](imgs/federated.png)       |
-
 ## Methodology
 1. **Pretraining**: DCGAN learns features from abdominal CT scans.
 2. **Federated Fine-Tuning**:  
@@ -94,11 +88,6 @@ generated_images = generator(noise, training=False)
 ## Datasets
 - **RSNA Abdominal Trauma CT**: [Kaggle](https://www.kaggle.com/datasets/theoviel/rsna-abdominal-trauma-detection-png-pt1)  
 - **Diabetic Retinopathy**: [Kaggle](https://www.kaggle.com/datasets/saipavansaketh/diabetic-retinopathy-unziped)
-
-## References
-1. Thesis: *FedGAN: Privacy-Preserving Federated Learning for Diabetic Retinopathy Image Generation* (Hassan Kamran, 2024).
-2. McMahan, H. B., et al. "[Communication-Efficient Learning of Deep Networks from Decentralized Data](https://arxiv.org/abs/1602.05629)". AISTATS, 2017.
-3. Naftchi-Ardebili, K., et al. "[SkullGAN: Synthetic Skull CT Generation with GANs](https://arxiv.org/abs/2308.00206)". arXiv, 2023.
 
 ## License
 MIT License. See `LICENSE` for details.
