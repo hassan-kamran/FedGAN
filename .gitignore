@@ -14,3 +14,4 @@ federated_learning_2_3/
 data/
 models/
 .DS_Store
+*.log
