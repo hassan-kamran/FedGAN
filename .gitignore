@@ -10,6 +10,7 @@ wheels/
 .venv
 federated_learning/
 federated_learning_2_5/
+federated_learning_2_3/
 data/
 models/
 .DS_Store
