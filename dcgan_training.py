@@ -8,9 +8,7 @@ from datetime import datetime
 import logging
 from model_dcgan import build_generator, build_discriminator
 
-# -----------------------------------------------------------------------------
 # Logging Configuration
-# -----------------------------------------------------------------------------
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
@@ -22,9 +20,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# -----------------------------------------------------------------------------
 # Loss Functions
-# -----------------------------------------------------------------------------
 def generator_loss(fake_output):
     return tf.reduce_mean(
         tf.keras.losses.binary_crossentropy(tf.ones_like(fake_output), fake_output)
@@ -43,9 +39,7 @@ def discriminator_loss(real_output, fake_output):
     return real_loss + fake_loss
 
 
-# -----------------------------------------------------------------------------
 # Directory Setup
-# -----------------------------------------------------------------------------
 BASE_DIR = os.path.abspath("federated_learning")
 DIRS = [
     "models/pretraining/generator",
@@ -63,9 +57,7 @@ for dir_path in DIRS:
     os.makedirs(full_path, exist_ok=True)
     logger.info("Created/Verified: %s", full_path)
 
-# -----------------------------------------------------------------------------
 # Global Configuration
-# -----------------------------------------------------------------------------
 CONFIG = {
     "client_settings": [3, 5, 7, 10],
     "base_data_path": os.path.abspath("data/train-val-test"),
@@ -93,18 +85,14 @@ CONFIG = {
 }
 
 
-# -----------------------------------------------------------------------------
 # TensorBoard Setup (if needed)
-# -----------------------------------------------------------------------------
 def setup_tensorboard(log_name):
     current_time = datetime.now().strftime("%Y%m%d-%H%M%S")
     log_dir = os.path.join(BASE_DIR, "logs/tensorboard", log_name, current_time)
     return tf.summary.create_file_writer(log_dir)
 
 
-# -----------------------------------------------------------------------------
 # Utility Functions
-# -----------------------------------------------------------------------------
 def verify_paths():
     logger.info("\n%s\nPath Verification\n%s", "=" * 40, "=" * 40)
     logger.info("Current working directory: %s", os.getcwd())
@@ -182,9 +170,7 @@ def generate_and_save_images(
     logger.info("Generated images saved to: %s", epoch_dir)
 
 
-# -----------------------------------------------------------------------------
 # Training Components
-# -----------------------------------------------------------------------------
 class LocalTrainer:
     def __init__(self, latent_dim, learning_rate, beta_1):
         self.generator = build_generator(latent_dim)
@@ -217,9 +203,7 @@ class LocalTrainer:
         return gen_loss, disc_loss
 
 
-# -----------------------------------------------------------------------------
 # Unfederated Training Function with Loss Tracking & Visualization
-# -----------------------------------------------------------------------------
 def train_unfederated_dcgan(tfrecord_path):
     logger.info("\n%s\nStarting Unfederated Training\n%s", "=" * 40, "=" * 40)
     writer = setup_tensorboard("unfederated")
@@ -344,9 +328,7 @@ def train_unfederated_dcgan(tfrecord_path):
     return generator, discriminator
 
 
-# -----------------------------------------------------------------------------
 # Evaluation Function (kept for saving model outputs)
-# -----------------------------------------------------------------------------
 def evaluate_generator(generator, discriminator, num_clusters, round_num):
     logger.info("Evaluating %d-cluster model from round %d", num_clusters, round_num)
     noise = normal([CONFIG["images_per_class"], CONFIG["latent_dim"]])
@@ -374,9 +356,7 @@ def evaluate_generator(generator, discriminator, num_clusters, round_num):
     return avg_score
 
 
-# -----------------------------------------------------------------------------
 # Federated Training Function with Loss Logging and Visualization
-# -----------------------------------------------------------------------------
 def train_federated_dcgan(unfed_discriminator):
     logger.info("\n%s\nStarting Federated Training\n%s", "=" * 40, "=" * 40)
     # Dictionary to store per-client loss history for each setting.
@@ -565,9 +545,7 @@ def train_federated_dcgan(unfed_discriminator):
         logger.info("Saved discriminator loss plot to: %s", disc_plot_path)
 
 
-# -----------------------------------------------------------------------------
 # Main Execution
-# -----------------------------------------------------------------------------
 if __name__ == "__main__":
     verify_paths()
     # First, train the unfederated model (now with loss tracking and plotting)
