@@ -12,6 +12,8 @@ federated_learning/
 federated_learning_2_5/
 federated_learning_2_3/
 federated_learning*
+fid_results*
+privacy_evaluation_results*/
 data/
 models/
 .DS_Store
