@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import logging
 from model_dcgan import build_generator, build_discriminator
+import numpy as np
 
 # Logging Configuration
 logging.basicConfig(
@@ -356,7 +357,232 @@ def evaluate_generator(generator, discriminator, num_clusters, round_num):
     return avg_score
 
 
-# Federated Training Function with Loss Logging and Visualization
+def plot_with_variance(epochs, mean_values, std_values, title, ylabel, save_path):
+    """Plot mean values with standard deviation bands."""
+    plt.figure(figsize=(10, 6))
+    plt.plot(epochs, mean_values, "b-", linewidth=2)
+    plt.fill_between(
+        epochs,
+        [m - s for m, s in zip(mean_values, std_values)],
+        [m + s for m, s in zip(mean_values, std_values)],
+        color="b",
+        alpha=0.2,
+    )
+    plt.title(title)
+    plt.xlabel("Epoch")
+    plt.ylabel(ylabel)
+    plt.grid(True, linestyle="--", alpha=0.7)
+    plt.savefig(save_path)
+    plt.close()
+    logger.info(f"Saved variance plot to: {save_path}")
+
+
+def create_cross_setting_comparison():
+    """Create a summary plot comparing performance across client settings."""
+    client_settings = CONFIG["client_settings"]
+
+    # Collect realism scores with variance
+    realism_means = []
+    realism_stds = []
+
+    for num_clients in client_settings:
+        eval_dir = os.path.join(CONFIG["eval_results_path"], f"clusters_{num_clients}")
+        score_file = os.path.join(
+            eval_dir, f"round_{CONFIG['rounds']}_scores_with_variance.txt"
+        )
+
+        if os.path.exists(score_file):
+            with open(score_file, "r") as f:
+                lines = f.readlines()
+                for line in lines:
+                    if "Average Realism Score:" in line:
+                        parts = line.split("±")
+                        mean_val = float(parts[0].split(":")[-1].strip())
+                        std_val = float(parts[1].strip())
+                        realism_means.append(mean_val)
+                        realism_stds.append(std_val)
+                        break
+        else:
+            # If the file with variance doesn't exist, try the regular one
+            score_file = os.path.join(eval_dir, f"round_{CONFIG['rounds']}_scores.txt")
+            if os.path.exists(score_file):
+                with open(score_file, "r") as f:
+                    for line in f:
+                        if "Average Realism Score:" in line:
+                            mean_val = float(line.split(":")[-1].strip())
+                            realism_means.append(mean_val)
+                            realism_stds.append(0)  # No std info available
+                            break
+
+    # Create bar plot with error bars
+    if realism_means:
+        plt.figure(figsize=(10, 6))
+        x_pos = np.arange(len(client_settings))
+
+        bars = plt.bar(
+            x_pos,
+            realism_means,
+            yerr=realism_stds,
+            align="center",
+            alpha=0.7,
+            ecolor="black",
+            capsize=10,
+        )
+
+        # Add values on top of bars
+        for i, bar in enumerate(bars):
+            height = bar.get_height()
+            plt.text(
+                bar.get_x() + bar.get_width() / 2.0,
+                height + realism_stds[i] + 0.01,
+                f"{realism_means[i]:.3f} ± {realism_stds[i]:.3f}",
+                ha="center",
+                va="bottom",
+                rotation=0,
+                fontsize=9,
+            )
+
+        plt.xlabel("Number of Clients")
+        plt.ylabel("Realism Score")
+        plt.title("Realism Score Comparison Across Client Settings")
+        plt.xticks(x_pos, [f"{c} Clients" for c in client_settings])
+        plt.ylim(0, max(realism_means) + max(realism_stds) + 0.1)
+        plt.grid(axis="y", linestyle="--", alpha=0.7)
+
+        # Save the plot
+        comparison_path = os.path.join(
+            CONFIG["eval_results_path"], "client_setting_comparison.png"
+        )
+        plt.tight_layout()
+        plt.savefig(comparison_path)
+        plt.close()
+        logger.info(f"Saved client setting comparison to: {comparison_path}")
+
+
+# Add to dcgan_training.py, after the federated training completes
+def evaluate_with_standard_metrics(config):
+    """Evaluate using FID and Inception Score after training completes."""
+    from evaluation_metrics import (
+        load_inception_model,
+        load_images,
+        calculate_inception_score,
+        calculate_fid,
+    )
+
+    print("\n" + "=" * 40)
+    print("Evaluating with standard metrics")
+    print("=" * 40 + "\n")
+
+    # Load inception model once for all evaluations
+    inception_model = load_inception_model()
+
+    # Path to real samples for comparison
+    real_images_dir = os.path.join(config["base_data_path"], "real_samples")
+    os.makedirs(real_images_dir, exist_ok=True)
+
+    # Load real samples
+    real_images = load_images(real_images_dir)
+    if len(real_images) == 0:
+        print("WARNING: No real images found. FID calculation will be skipped.")
+        return
+
+    # Prepare results tables
+    results = {"client_count": [], "fid": [], "is_mean": [], "is_std": []}
+
+    # Evaluate each client setting
+    for client_count in config["client_settings"]:
+        # Find latest generated images
+        latest_gen_dir = find_latest_generated_images(config, client_count)
+
+        if not latest_gen_dir or not os.path.exists(latest_gen_dir):
+            print(f"No generated images found for {client_count} clients. Skipping.")
+            continue
+
+        fake_images = load_images(latest_gen_dir)
+
+        if len(fake_images) > 0:
+            # Calculate FID
+            try:
+                fid_score = calculate_fid(real_images, fake_images, inception_model)
+                # Calculate IS
+                is_mean, is_std = calculate_inception_score(
+                    fake_images, inception_model
+                )
+
+                # Store results
+                results["client_count"].append(client_count)
+                results["fid"].append(fid_score)
+                results["is_mean"].append(is_mean)
+                results["is_std"].append(is_std)
+
+                print(f"Client Count: {client_count}")
+                print(f"FID Score: {fid_score:.4f}")
+                print(f"Inception Score: {is_mean:.4f} ± {is_std:.4f}\n")
+
+                # Save to file
+                metrics_dir = os.path.join(
+                    config["eval_results_path"], "standard_metrics"
+                )
+                os.makedirs(metrics_dir, exist_ok=True)
+                with open(f"{metrics_dir}/metrics_{client_count}clients.txt", "w") as f:
+                    f.write(f"Client Count: {client_count}\n")
+                    f.write(f"FID Score: {fid_score:.4f}\n")
+                    f.write(f"Inception Score: {is_mean:.4f} ± {is_std:.4f}\n")
+            except Exception as e:
+                print(f"Error calculating metrics for {client_count} clients: {str(e)}")
+
+    # Create visualization
+    if results["client_count"]:
+        create_metrics_comparison_plot(
+            results, os.path.join(config["eval_results_path"], "standard_metrics")
+        )
+
+
+def find_latest_generated_images(config, client_count):
+    """Find the most recent directory of generated images for a given client count."""
+    base_dir = os.path.join(
+        config["generated_images_path"], f"federated/clusters_{client_count}"
+    )
+    if not os.path.exists(base_dir):
+        return None
+
+    dirs = [d for d in os.listdir(base_dir) if os.path.isdir(os.path.join(base_dir, d))]
+    if not dirs:
+        return None
+
+    # Sort by creation time (newest first)
+    dirs.sort(key=lambda d: os.path.getmtime(os.path.join(base_dir, d)), reverse=True)
+    return os.path.join(base_dir, dirs[0])
+
+
+def create_metrics_comparison_plot(results, output_dir):
+    """Create comparison plots for standard metrics."""
+    import matplotlib.pyplot as plt
+
+    plt.figure(figsize=(12, 5))
+
+    # FID plot (lower is better)
+    plt.subplot(1, 2, 1)
+    plt.bar([f"{c} Clients" for c in results["client_count"]], results["fid"])
+    plt.title("Fréchet Inception Distance (lower is better)")
+    plt.ylabel("FID Score")
+
+    # IS plot (higher is better)
+    plt.subplot(1, 2, 2)
+    plt.bar(
+        [f"{c} Clients" for c in results["client_count"]],
+        results["is_mean"],
+        yerr=results["is_std"],
+        capsize=5,
+    )
+    plt.title("Inception Score (higher is better)")
+    plt.ylabel("IS Score")
+
+    plt.tight_layout()
+    plt.savefig(f"{output_dir}/metrics_comparison.png")
+    print(f"Metrics comparison plot saved to {output_dir}/metrics_comparison.png")
+
+
 def train_federated_dcgan(unfed_discriminator):
     logger.info("\n%s\nStarting Federated Training\n%s", "=" * 40, "=" * 40)
     # Dictionary to store per-client loss history for each setting.
@@ -485,10 +711,50 @@ def train_federated_dcgan(unfed_discriminator):
                         f"federated/clusters_{num_clusters}",
                     ),
                 )
-                # Optionally, you can call evaluate_generator here, though the realism score is less precise.
+
+                # Add variance calculation for realism scores
+                noise_samples = 5  # Number of noise samples to evaluate
+                realism_scores = []
+                for _ in range(noise_samples):
+                    noise = normal([CONFIG["images_per_class"], CONFIG["latent_dim"]])
+                    generated_images = global_generator(noise, training=False)
+                    predictions = unfed_discriminator(generated_images)
+                    realism_scores.extend(predictions.numpy().flatten())
+
+                # Calculate mean and std for realism scores
+                mean_realism = np.mean(realism_scores)
+                std_realism = np.std(realism_scores)
+
+                # Evaluate generator and get average score
                 avg_score = evaluate_generator(
                     global_generator, unfed_discriminator, num_clusters, round_num + 1
                 )
+
+                # Log and save the variance information
+                logger.info(
+                    f"Round {round_num + 1} Realism Score: {mean_realism:.4f} ± {std_realism:.4f}"
+                )
+
+                # Save to evaluation directory
+                eval_dir = os.path.join(
+                    CONFIG["eval_results_path"], f"clusters_{num_clusters}"
+                )
+                os.makedirs(eval_dir, exist_ok=True)
+                with open(
+                    os.path.join(
+                        eval_dir, f"round_{round_num + 1}_scores_with_variance.txt"
+                    ),
+                    "w",
+                ) as f:
+                    f.write(
+                        f"Average Realism Score: {mean_realism:.4f} ± {std_realism:.4f}\n"
+                    )
+                    f.write(f"Sample Size: {len(realism_scores)}\n")
+                    f.write(f"Standard Deviation: {std_realism:.4f}\n")
+                    f.write(
+                        f"95% Confidence Interval: ({mean_realism - 1.96 * std_realism / np.sqrt(len(realism_scores)):.4f}, {mean_realism + 1.96 * std_realism / np.sqrt(len(realism_scores)):.4f})\n"
+                    )
+
                 with round_writer.as_default():
                     tf.summary.scalar("global_model_score", avg_score, step=round_num)
             else:
@@ -497,6 +763,109 @@ def train_federated_dcgan(unfed_discriminator):
                     num_clusters,
                     round_num + 1,
                 )
+
+        # After all rounds for the current client setting, calculate variance across clients
+        logger.info(
+            f"Calculating variance statistics for {num_clusters}-client setting"
+        )
+
+        # For each epoch in training, calculate mean and std across clients
+        total_points = CONFIG["rounds"] * CONFIG["epochs"]
+        epochs = list(range(1, total_points + 1))
+
+        # Initialize arrays to hold mean and std values
+        gen_loss_means = []
+        gen_loss_stds = []
+        disc_loss_means = []
+        disc_loss_stds = []
+
+        # For each epoch point, gather all client values
+        for epoch_idx in range(total_points):
+            # Gather values across clients for this epoch
+            gen_values = []
+            disc_values = []
+
+            for client_id in range(1, num_clusters + 1):
+                if client_id in loss_history[num_clusters] and epoch_idx < len(
+                    loss_history[num_clusters][client_id]["gen"]
+                ):
+                    gen_values.append(
+                        loss_history[num_clusters][client_id]["gen"][epoch_idx]
+                    )
+                    disc_values.append(
+                        loss_history[num_clusters][client_id]["disc"][epoch_idx]
+                    )
+
+            # Calculate mean and std if we have values
+            if gen_values:
+                gen_loss_means.append(np.mean(gen_values))
+                gen_loss_stds.append(np.std(gen_values))
+                disc_loss_means.append(np.mean(disc_values))
+                disc_loss_stds.append(np.std(disc_values))
+
+        # Plot with variance
+        x_labels = []
+        for r in range(1, CONFIG["rounds"] + 1):
+            for e in range(1, CONFIG["epochs"] + 1):
+                x_labels.append(f"R{r}E{e}")
+
+        # Generator variance plot
+        plot_with_variance(
+            epochs,
+            gen_loss_means,
+            gen_loss_stds,
+            f"Generator Loss with Variance ({num_clusters} Clients)",
+            "Generator Loss",
+            os.path.join(
+                CONFIG["eval_results_path"],
+                f"variance_generator_{num_clusters}_clients.png",
+            ),
+        )
+
+        # Discriminator variance plot
+        plot_with_variance(
+            epochs,
+            disc_loss_means,
+            disc_loss_stds,
+            f"Discriminator Loss with Variance ({num_clusters} Clients)",
+            "Discriminator Loss",
+            os.path.join(
+                CONFIG["eval_results_path"],
+                f"variance_discriminator_{num_clusters}_clients.png",
+            ),
+        )
+
+        # Save variance statistics to a text file
+        stats_path = os.path.join(
+            CONFIG["eval_results_path"], f"variance_stats_{num_clusters}_clients.txt"
+        )
+        with open(stats_path, "w") as f:
+            f.write(f"Variance Statistics for {num_clusters}-client setting\n")
+            f.write("=" * 50 + "\n\n")
+
+            f.write("Generator Loss:\n")
+            for i, (mean, std) in enumerate(zip(gen_loss_means, gen_loss_stds)):
+                f.write(f"  {x_labels[i]}: {mean:.4f} ± {std:.4f}\n")
+
+            f.write("\nDiscriminator Loss:\n")
+            for i, (mean, std) in enumerate(zip(disc_loss_means, disc_loss_stds)):
+                f.write(f"  {x_labels[i]}: {mean:.4f} ± {std:.4f}\n")
+
+            # Calculate overall statistics
+            overall_gen_mean = np.mean(gen_loss_means)
+            overall_gen_std = np.mean(gen_loss_stds)
+            overall_disc_mean = np.mean(disc_loss_means)
+            overall_disc_std = np.mean(disc_loss_stds)
+
+            f.write("\nOverall Statistics:\n")
+            f.write(
+                f"  Generator Loss: {overall_gen_mean:.4f} ± {overall_gen_std:.4f}\n"
+            )
+            f.write(
+                f"  Discriminator Loss: {overall_disc_mean:.4f} ± {overall_disc_std:.4f}\n"
+            )
+
+        logger.info(f"Saved variance statistics to: {stats_path}")
 
         # After all rounds for the current client setting, plot the loss curves.
         # The x-axis will have composite labels "R{round}E{epoch}"
@@ -544,6 +913,9 @@ def train_federated_dcgan(unfed_discriminator):
         plt.close()
         logger.info("Saved discriminator loss plot to: %s", disc_plot_path)
 
+    # Create cross-setting comparison after all client settings are processed
+    create_cross_setting_comparison()
+
 
 # Main Execution
 if __name__ == "__main__":
@@ -555,6 +927,7 @@ if __name__ == "__main__":
     # Then run federated training using the unfederated discriminator as reference
     if unfed_discriminator:
         train_federated_dcgan(unfed_discriminator)
+        evaluate_with_standard_metrics(CONFIG)
     else:
         logger.error(
             "Failed to start federated training: no unfederated discriminator available"

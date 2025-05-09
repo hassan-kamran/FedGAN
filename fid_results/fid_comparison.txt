@@ -1,0 +1,9 @@
+FID Score Comparison Across Clusters
+==================================
+
+Cluster 5 (round_2): 268.5975
+Cluster 7 (round_2): 272.5296
+Cluster 3 (round_2): 274.4589
+Cluster 10 (round_2): 290.3746
+
+Note: Lower FID scores indicate better image quality and diversity.
