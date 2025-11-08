@@ -18,3 +18,32 @@ data/
 models/
 .DS_Store
 *.log
+
+# Backend
+backend/.env
+backend/uploads/
+backend/outputs/
+backend/logs/
+*.db
+*.sqlite3
+
+# Frontend
+frontend/node_modules/
+frontend/build/
+frontend/.env.local
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+
+# Docker
+docker-compose.override.yml
+postgres_data/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Uploads and outputs
+uploads/
+outputs/
