@@ -1,0 +1,41 @@
+# FedGAN with 10 Clients Configuration
+# Extended setup for larger-scale federated learning
+
+name: fedgan_retinopathy_10clients
+description: |
+  Federated GAN with 10 clients for studying scalability
+  of federated learning on medical imaging data.
+
+seed: 42
+
+model:
+  latent_dim: 200
+  learning_rate: 0.0002
+  beta_1: 0.5
+  beta_2: 0.999
+
+data:
+  image_size: 128
+  channels: 1
+  batch_size: 16
+  clip_limit: 2.0
+  tile_grid_size: [8, 8]
+  gamma: 1.5
+
+federated:
+  num_clients: 10
+  local_epochs: 5
+  federated_rounds: 10
+  aggregation_strategy: fedavg
+  client_selection_strategy: all
+
+paths:
+  data_dir: data/train-val-test/non_iid_clusters_10
+  model_dir: models/federated_10clients
+  log_dir: logs/federated_10clients
+  output_dir: outputs/federated_10clients
+  checkpoint_dir: checkpoints/federated_10clients
+
+metadata:
+  dataset: diabetic_retinopathy
+  experiment_type: scalability_test

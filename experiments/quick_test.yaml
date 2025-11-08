@@ -1,0 +1,30 @@
+# Quick Test Configuration
+# Minimal setup for testing the pipeline
+
+name: quick_test
+description: Quick test configuration with minimal resources
+
+seed: 42
+
+model:
+  latent_dim: 100
+  learning_rate: 0.0002
+  beta_1: 0.5
+
+data:
+  image_size: 64
+  channels: 1
+  batch_size: 4
+
+federated:
+  num_clients: 2
+  local_epochs: 1
+  federated_rounds: 1
+  aggregation_strategy: fedavg
+
+paths:
+  data_dir: data/test
+  model_dir: models/test
+  log_dir: logs/test
+  output_dir: outputs/test
+  checkpoint_dir: checkpoints/test
