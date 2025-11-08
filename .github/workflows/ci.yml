@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop, 'claude/**' ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Lint with flake8
+        run: |
+          flake8 fedgan --max-line-length=100 --ignore=E203,W503,E501 --exclude=fedgan/__pycache__
+
+      - name: Format check with black
+        run: |
+          black --check fedgan tests scripts --line-length=100
+
+      - name: Type check with mypy
+        run: |
+          mypy fedgan --ignore-missing-imports
+        continue-on-error: true
+
+      - name: Run unit tests
+        run: |
+          pytest tests/unit/ -v --tb=short -m "not slow"
+
+      - name: Run integration tests
+        run: |
+          pytest tests/integration/ -v --tb=short -m "integration"
+        continue-on-error: true
+
+      - name: Generate coverage report
+        run: |
+          pytest tests/ --cov=fedgan --cov-report=xml --cov-report=term -m "not slow"
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+        continue-on-error: true
+
+  code-quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          pip install -e ".[dev]"
+
+      - name: Check code quality
+        run: |
+          make check || true
