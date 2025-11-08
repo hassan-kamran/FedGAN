@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome to FedMed Platform{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <!-- Hero Section -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
+        <div class="text-center">
+            <h1 class="text-5xl font-extrabold text-gray-900 sm:text-6xl md:text-7xl">
+                <span class="block">Enterprise Federated Learning</span>
+                <span class="block text-blue-600">for Healthcare</span>
+            </h1>
+            <p class="mt-6 max-w-2xl mx-auto text-xl text-gray-500">
+                Train AI models collaboratively across hospital networks without sharing sensitive patient data.
+                HIPAA-compliant, privacy-preserving, and enterprise-grade.
+            </p>
+            <div class="mt-10 flex justify-center gap-4">
+                <a href="/auth/register" class="px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 md:py-4 md:text-lg md:px-10">
+                    Get Started
+                </a>
+                <a href="/auth/login" class="px-8 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-gray-50 md:py-4 md:text-lg md:px-10">
+                    Sign In
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Features Section -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div class="grid grid-cols-1 gap-8 md:grid-cols-3">
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="text-blue-600 text-4xl mb-4">🔒</div>
+                <h3 class="text-xl font-bold mb-2">Privacy-First</h3>
+                <p class="text-gray-600">Keep patient data on-premise. Only model weights are shared during training.</p>
+            </div>
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="text-blue-600 text-4xl mb-4">🏥</div>
+                <h3 class="text-xl font-bold mb-2">Multi-Institution</h3>
+                <p class="text-gray-600">Collaborate with multiple hospitals and research centers seamlessly.</p>
+            </div>
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="text-blue-600 text-4xl mb-4">📊</div>
+                <h3 class="text-xl font-bold mb-2">Real-Time Monitoring</h3>
+                <p class="text-gray-600">Track training progress, metrics, and client status in real-time.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Use Cases -->
+    <div class="bg-white py-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-3xl font-bold text-center mb-12">Use Cases</h2>
+            <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div class="border border-gray-200 rounded-lg p-6">
+                    <h3 class="text-lg font-semibold mb-2">Synthetic Medical Image Generation</h3>
+                    <p class="text-gray-600">Generate synthetic retinal images, CT scans, and X-rays for AI training without privacy concerns.</p>
+                </div>
+                <div class="border border-gray-200 rounded-lg p-6">
+                    <h3 class="text-lg font-semibold mb-2">Disease Detection Models</h3>
+                    <p class="text-gray-600">Train diagnostic models across multiple hospitals to improve accuracy and generalization.</p>
+                </div>
+                <div class="border border-gray-200 rounded-lg p-6">
+                    <h3 class="text-lg font-semibold mb-2">Clinical Trial Analytics</h3>
+                    <p class="text-gray-600">Analyze multi-site clinical trial data without centralizing sensitive information.</p>
+                </div>
+                <div class="border border-gray-200 rounded-lg p-6">
+                    <h3 class="text-lg font-semibold mb-2">Drug Discovery</h3>
+                    <p class="text-gray-600">Collaborate on pharmaceutical research while maintaining data sovereignty.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

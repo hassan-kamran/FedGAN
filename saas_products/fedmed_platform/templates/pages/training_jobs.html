@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Training Jobs - FedMed Platform{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Training Jobs</h1>
+        <a href="/training/new" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">
+            Create New Job
+        </a>
+    </div>
+
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Model Type</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Progress</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for job in jobs %}
+                <tr>
+                    <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ job.name }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500">{{ job.model_type }}</td>
+                    <td class="px-6 py-4">
+                        <span class="px-2 py-1 text-xs rounded-full
+                            {% if job.status == 'completed' %}bg-green-100 text-green-800
+                            {% elif job.status == 'running' %}bg-blue-100 text-blue-800
+                            {% elif job.status == 'failed' %}bg-red-100 text-red-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ job.status }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-500">
+                        {{ job.current_round }}/{{ job.num_rounds }}
+                    </td>
+                    <td class="px-6 py-4 text-sm">
+                        <a href="/training/{{ job.id }}" class="text-blue-600 hover:text-blue-900 mr-3">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
